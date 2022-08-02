@@ -30,7 +30,7 @@ from func_parser import create_func_db, get_namespaces
 
 def usage(err = None):
     if err:
-        print('error: %s' % err)
+        print(f'error: {err}')
     print('''\
 Script to generate CT API instantiations for backend based on general_ct_templates.hpp
 Note: requires clang-format 9.0.0 tool to be installed
@@ -65,20 +65,22 @@ namespace_list=namespace.split("::")
 header_db = create_func_db(in_filename)
 external_namespace_list=get_namespaces(in_filename)
 
-print("Generate " + out_filename)
+print(f"Generate {out_filename}")
 
 def print_funcs(func_list):
-    code=""
-    for data in func_list:
-        code +="""
+    return "".join(
+        """
 template<>
 {ret_type} {name}<backend::{backend}>{par_str} {{
     {name}_precondition{call_str};
     {namespace}::{name}{call_str};
     {name}_postcondition{call_str};
 }}
-""".format(namespace=namespace, backend=backend, **data)
-    return code
+""".format(
+            namespace=namespace, backend=backend, **data
+        )
+        for data in func_list
+    )
 
 try:
     os.makedirs(os.path.dirname(out_filename))
@@ -86,8 +88,8 @@ except OSError as exc:
     if exc.errno != errno.EEXIST:
         raise
 
-out_file = open(out_filename, "w+")
-out_file.write("""//
+with open(out_filename, "w+") as out_file:
+    out_file.write("""//
 // Generated based on {in_header}
 //
 
@@ -105,22 +107,20 @@ out_file.write("""//
 """.format(in_header=in_filename, ct_teplates=in_filename.strip("include/"), internal_api=include.strip("include/")))
 
 
-for nmsp in external_namespace_list:
-    out_file.write("""namespace {name} {{
+    for nmsp in external_namespace_list:
+        out_file.write("""namespace {name} {{
 """.format(name=nmsp))
 
-for func_name, func_list in header_db.items():
-    out_file.write("""
+    for func_name, func_list in header_db.items():
+        out_file.write("""
 {funcs}""".format(funcs=print_funcs(func_list)))
 
 
-for nmsp in reversed(external_namespace_list):
-    out_file.write("""}} // namespace {name} {{
+    for nmsp in reversed(external_namespace_list):
+        out_file.write("""}} // namespace {name} {{
 """.format(name=nmsp))
 
-out_file.close()
-
-print("Formatting with clang-format " + out_filename)
+print(f"Formatting with clang-format {out_filename}")
 try:
     lc = ["clang-format", "-style=file", "-i", out_filename]
     call(lc)

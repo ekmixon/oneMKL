@@ -118,8 +118,7 @@ THIRD-PARTY-PROGRAMS file and in the README.md file included with the Software P
 
 
     def _cmake(self):
-        cmake = CMake(self)
-        return cmake
+        return CMake(self)
 
 
     def build(self):

@@ -30,7 +30,7 @@ from func_parser import create_func_db, get_namespaces
 
 def usage(err = None):
     if err:
-        print('error: %s' % err)
+        print(f'error: {err}')
     print('''\
 Script to generate blank wrappers and pointers table based on header.hpp
 Note: requires clang-format 9.0.0 tool
@@ -65,17 +65,19 @@ header_db = create_func_db(in_filename)
 namespace_list = get_namespaces(in_filename)
 
 # Generate wrappers
-print("Generate " + out_filename)
+print(f"Generate {out_filename}")
 
 def print_funcs(func_list):
-    code=""
-    for data in func_list:
-        code +="""
+    return "".join(
+        """
 {ret_type} {name}{par_str} {{
     throw std::runtime_error("Not implemented for {libname}");
 }}
-""".format(libname=libname, **data)
-    return code
+""".format(
+            libname=libname, **data
+        )
+        for data in func_list
+    )
 
 try:
     os.makedirs(os.path.dirname(out_filename))
@@ -83,8 +85,8 @@ except OSError as exc:
     if exc.errno != errno.EEXIST:
         raise
 
-out_file = open(out_filename, "w+")
-out_file.write("""//
+with open(out_filename, "w+") as out_file:
+    out_file.write("""//
 // generated file
 //
 
@@ -96,22 +98,20 @@ out_file.write("""//
 
 """.format(header=in_filename.strip("include/")))
 
-for nmsp in namespace_list:
-    out_file.write("""namespace {name} {{
+    for nmsp in namespace_list:
+        out_file.write("""namespace {name} {{
 """.format(name=nmsp))
 
-for func_name, func_list in header_db.items():
-    out_file.write("""
+    for func_name, func_list in header_db.items():
+        out_file.write("""
 {funcs}""".format(funcs=print_funcs(func_list)))
 
-out_file.write("\n")
-for nmsp in reversed(namespace_list):
-    out_file.write("""}} // namespace {name} {{
+    out_file.write("\n")
+    for nmsp in reversed(namespace_list):
+        out_file.write("""}} // namespace {name} {{
 """.format(name=nmsp))
 
-out_file.close()
-
-print("Formatting with clang-format " + out_filename)
+print(f"Formatting with clang-format {out_filename}")
 try:
     lc = ["clang-format", "-style=file", "-i", out_filename]
     call(lc)
@@ -122,7 +122,7 @@ except OSError as exc:
         raise
 
 # Generate table
-print("Generate " + table_file)
+print(f"Generate {table_file}")
 
 try:
     os.makedirs(os.path.dirname(table_file))
@@ -130,8 +130,8 @@ except OSError as exc:
     if exc.errno != errno.EEXIST:
         raise
 
-out_file = open(table_file, "w+")
-out_file.write("""//
+with open(table_file, "w+") as out_file:
+    out_file.write("""//
 // generated file
 //
 
@@ -144,20 +144,18 @@ extern "C" function_table_t mkl_blas_table = {{
     WRAPPER_VERSION,
 """.format(table=in_table.strip('src/'), header=in_filename.strip('include/')))
 
-namespace = ""
-for nmsp in namespace_list:
-    namespace = namespace + nmsp.strip() + "::"
-with open(table_list, "r") as f:
-    table = f.readlines()
+    namespace = ""
+    for nmsp in namespace_list:
+        namespace = namespace + nmsp.strip() + "::"
+    with open(table_list, "r") as f:
+        table = f.readlines()
 
-for t in table:
-    out_file.write("    " + namespace + t.strip() + ",\n")
+    for t in table:
+        out_file.write(f"    {namespace}{t.strip()}" + ",\n")
 
 
-out_file.write("\n};\n")
-out_file.close()
-
-print("Formatting with clang-format " + table_file)
+    out_file.write("\n};\n")
+print(f"Formatting with clang-format {table_file}")
 try:
     lc = ["clang-format", "-style=file", "-i", table_file]
     call(lc)

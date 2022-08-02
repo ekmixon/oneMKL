@@ -30,7 +30,7 @@ from func_parser import create_func_db, get_namespaces
 
 def usage(err = None):
     if err:
-        print('error: %s' % err)
+        print(f'error: {err}')
     print('''\
 Script to generate backend library header based on base_header.h
 Note: requires clang-format 9.0.0 tool to be installed
@@ -62,16 +62,16 @@ namespace_list=namespace.split("::")
 
 header_db = create_func_db(in_filename)
 
-print("Generate " + out_headername)
+print(f"Generate {out_headername}")
 
 def print_declaration(func_list):
-    code=""
-    for data in func_list:
-        code +="""
+    return "".join(
+        """
 {ret_type} {name}{par_str};
 
 """.format(**data)
-    return code
+        for data in func_list
+    )
 
 try:
     os.makedirs(os.path.dirname(out_headername))
@@ -79,8 +79,8 @@ except OSError as exc:
     if exc.errno != errno.EEXIST:
         raise
 
-out_file = open(out_headername, "w+")
-out_file.write("""//
+with open(out_headername, "w+") as out_file:
+    out_file.write("""//
 // Generated based on {in_filename}
 //
 
@@ -94,21 +94,19 @@ out_file.write("""//
 #include "oneapi/mkl/types.hpp"
 """.format(in_filename=in_filename))
 
-for nmsp in namespace_list:
-    out_file.write("""namespace {name} {{
+    for nmsp in namespace_list:
+        out_file.write("""namespace {name} {{
 """.format(name=nmsp))
 
-for func_name, func_list in header_db.items():
-    out_file.write("""
+    for func_name, func_list in header_db.items():
+        out_file.write("""
 {funcs}""".format(funcs=print_declaration(func_list)))
 
-for nmsp in reversed(namespace_list):
-    out_file.write("""}} // namespace {name} {{
+    for nmsp in reversed(namespace_list):
+        out_file.write("""}} // namespace {name} {{
 """.format(name=nmsp))
 
-out_file.close()
-
-print("Formatting with clang-format " + out_headername)
+print(f"Formatting with clang-format {out_headername}")
 try:
     lc = ["clang-format", "-style=file", "-i", out_headername]
     call(lc)

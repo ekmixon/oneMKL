@@ -53,28 +53,32 @@ def parse_item(item):
     par_list = [x.strip() for x in par_str_.split('@') \
                     if len(x.strip()) > 0 ]
     """Split list of parameters to types and names"""
-    if len(par_list) > 0:
-            """Add parameter names (param1, param2, etc) if the declaration includes only types"""
-            if re.search('(,|^)+\s*(const)*\s*[\w:]+\s*[*]*\s*(,|$)+', re.sub('<[\s\w\d,]*>', '', par_str)) is not None:
-                par_list = [(x + ' param' + str(idx)).replace(" * ", " *" \
-                     ).replace("[] param" + str(idx), "param" + str(idx) + "[]") \
-                     for idx, x in enumerate(par_list)]
+    if par_list:
+        """Add parameter names (param1, param2, etc) if the declaration includes only types"""
+        if re.search('(,|^)+\s*(const)*\s*[\w:]+\s*[*]*\s*(,|$)+', re.sub('<[\s\w\d,]*>', '', par_str)) is not None:
+            par_list = [
+                f'{x} param{str(idx)}'.replace(" * ", " *").replace(
+                    f"[] param{str(idx)}", f"param{str(idx)}[]"
+                )
+                for idx, x in enumerate(par_list)
+            ]
 
-            """Extract names to call_list"""
-            call_list = [x.split('=', 1)[0].strip().rsplit(' ', 1)[1].strip(' *').strip('\[\]').strip('&') \
-                            for x in par_list]
 
-            """Extract types to sig_list"""
-            par_list_wo_st_arrays = [(x.rsplit(' ', 1)[0] + \
-                    (lambda x: '* ' if x.find('[]') != -1 else ' ')(x.rsplit(' ', 1)[1]) + \
-                    (x.rsplit(' ', 1)[1]).strip('\[\]')) for x in par_list]
-            sig_list = [(x.rsplit(' ', 1)[0] + \
-                                    (x.rsplit(' ', 1)[1].startswith('*') \
-                                    and (' ' + x.rsplit(' ', 1)[1].count('*') * '*') or '')) \
-                                    for x in par_list_wo_st_arrays]
+        """Extract names to call_list"""
+        call_list = [x.split('=', 1)[0].strip().rsplit(' ', 1)[1].strip(' *').strip('\[\]').strip('&') \
+                        for x in par_list]
+
+        """Extract types to sig_list"""
+        par_list_wo_st_arrays = [(x.rsplit(' ', 1)[0] + \
+                (lambda x: '* ' if x.find('[]') != -1 else ' ')(x.rsplit(' ', 1)[1]) + \
+                (x.rsplit(' ', 1)[1]).strip('\[\]')) for x in par_list]
+        sig_list = [(x.rsplit(' ', 1)[0] + \
+                                (x.rsplit(' ', 1)[1].startswith('*') \
+                                and (' ' + x.rsplit(' ', 1)[1].count('*') * '*') or '')) \
+                                for x in par_list_wo_st_arrays]
     else:
-            call_list = list()
-            sig_list = list()
+        call_list = []
+        sig_list = []
     par_str = '(' + ', '.join(par_list) + ')'
     call_str = '(' + ', '.join(call_list) + ')'
     sig_str = '(' + ', '.join(sig_list) + ')'
@@ -116,12 +120,11 @@ def strip_line(l):
     """ remove simple wrapper function body"""
     global is_wrapperbody
     if is_wrapperbody == 1:
-        if re.search('^\s*}', l) is not None:
-            l = l.split('}', 1)[1].strip()
-            is_wrapperbody = 0
-        else:
+        if re.search('^\s*}', l) is None:
             return ""
 
+        l = l.split('}', 1)[1].strip()
+        is_wrapperbody = 0
     m = re.search(r'[)]\s*\n*\s*[{]', l)
     if m is not None:
         l = l[:m.end()].strip('{').strip() + ";"
@@ -129,11 +132,10 @@ def strip_line(l):
 
     global is_comment
     if is_comment == 1:
-        if re.search('\*/', l) is not None:
-            l = l.split('*/', 1)[1].strip()
-            is_comment = 0
-        else:
+        if re.search('\*/', l) is None:
             return ""
+        l = l.split('*/', 1)[1].strip()
+        is_comment = 0
     """ Delete comments """
     l1 = l.split('#', 1)[0].strip()
     l2 = l1.split('//', 1)[0].strip()
@@ -160,7 +162,7 @@ def create_func_db(filename):
         if not stripped:
             continue
         """ Check if function contains 1 line """
-        whole_line += stripped + ' '
+        whole_line += f'{stripped} '
         """ Check if there is function """
         if re.search('[(][\w\s\*/\&,_\[\]():<>={}]*[)]\s*[;]', whole_line) is None:
             """ Check if there is some other staff before the function """
@@ -179,7 +181,7 @@ def create_func_db(filename):
 def get_namespaces(filename):
     with open(filename, 'r') as f:
         data = f.readlines()
-    namespace_list = list()
+    namespace_list = []
     for l in data:
         stripped = strip_line(l)
         if re.search('^\s*namespace\s*\w+\s*[{]', l) is not None:

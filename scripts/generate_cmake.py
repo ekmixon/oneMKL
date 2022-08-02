@@ -29,7 +29,7 @@ from func_parser import create_func_db, get_namespaces
 
 def usage(err = None):
     if err:
-        print('error: %s' % err)
+        print(f'error: {err}')
     print('''\
 Script to generate CMakeLists.txt for all files in the specified directory
 Usage:
@@ -53,22 +53,21 @@ in_dir = argv[1]
 libname = argv[2]
 
 if not os.path.exists(in_dir):
-    print("Error: directory " + in_dir + " doesn't exist\n")
+    print(f"Error: directory {in_dir}" + " doesn't exist\n")
     exit(1)
 
-cmake_file = in_dir + "/CMakeLists.txt"
+cmake_file = f"{in_dir}/CMakeLists.txt"
 
 if os.path.exists(cmake_file):
-    print("Error: file " + cmake_file + " already exists\n")
+    print(f"Error: file {cmake_file}" + " already exists\n")
     exit(1)
 else:
-    print("Generate " + cmake_file)
+    print(f"Generate {cmake_file}")
 
 file_list = os.listdir(in_dir)
 
-out_file = open(cmake_file, "w+")
-
-out_file.write("""#
+with open(cmake_file, "w+") as out_file:
+    out_file.write("""#
 # generated file
 #
 
@@ -82,15 +81,15 @@ add_library(${{LIB_NAME}})
 add_library(${{LIB_OBJ}} OBJECT
 """.format(libname=libname))
 
-for f in file_list:
-    if re.search('_dyn.c', f):
-        out_file.write("""  $<$<BOOL:${{BUILD_SHARED_LIBS}}>: {filename}>
+    for f in file_list:
+        if re.search('_dyn.c', f):
+            out_file.write("""  $<$<BOOL:${{BUILD_SHARED_LIBS}}>: {filename}>
 """.format(filename=f))
-    else:
-        out_file.write("""  {filename}
+        else:
+            out_file.write("""  {filename}
 """.format(filename=f))
 
-out_file.write("""
+    out_file.write("""
 )
 
 target_include_directories(${{LIB_OBJ}}
@@ -125,5 +124,3 @@ install(TARGETS ${{LIB_NAME}} EXPORT oneMKLTargets
   LIBRARY DESTINATION lib
 )
 """.format())
-
-out_file.close()
